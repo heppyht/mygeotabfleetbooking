@@ -1,0 +1,493 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Fleet Management | Vehicle Booking</title>
+  <link rel="stylesheet" href="css/base.css?v=20261125-2">
+  <link rel="stylesheet" href="css/components.css?v=20261125-2">
+  <link rel="stylesheet" href="css/pages.css?v=20261125-2">
+</head>
+<body>
+  <main class="booking-app">
+    <header class="hero">
+      <div class="hero-mark" aria-hidden="true">FM</div>
+      <div>
+        <p class="eyebrow">FLEET MANAGEMENT</p>
+        <h1>Fleet Management</h1>
+        <p class="hero-copy">Submit vehicle booking requests, dispatch fleet assignments, and track booking history.</p>
+      </div>
+    </header>
+
+    <div class="app-shell">
+      <nav class="side-nav" aria-label="Add-in navigation">
+        <p class="eyebrow">MAIN MENU</p>
+        <div class="nav-items">
+          <button class="nav-item" type="button" data-page="booking" aria-current="page">Booking</button>
+          <button class="nav-item" type="button" data-page="approval" hidden>
+            <span>Approval</span>
+            <span id="approvalPendingBadge" class="nav-badge" hidden>0</span>
+          </button>
+          <button class="nav-item" type="button" data-page="users" hidden>Drivers &amp; Users</button>
+          <button class="nav-item" type="button" data-page="reports">Reports</button>
+          <button class="nav-item" type="button" data-page="vehicles">Vehicles</button>
+        </div>
+      </nav>
+
+      <div class="page-content">
+        <section id="page-booking" class="page-view" aria-labelledby="bookingPageTitle">
+          <div class="page-heading">
+            <div>
+              <p class="eyebrow">OPERATIONS</p>
+              <h2 id="bookingPageTitle">Vehicle bookings</h2>
+              <p class="page-description">Submit booking requests with your travel schedule, purpose, and destination. An Administrator will assign an available vehicle and driver during approval.</p>
+            </div>
+          </div>
+
+          <div id="status" class="status" role="status" aria-live="polite">Connecting to MyGeotab...</div>
+
+          <div class="booking-layout">
+            <section class="panel" aria-labelledby="formTitle">
+              <div class="section-heading">
+                <div>
+                  <p class="eyebrow">NEW REQUEST</p>
+                  <h3 id="formTitle">Create booking</h3>
+                </div>
+              </div>
+              <form id="bookingForm" class="booking-form">
+                <div class="field">
+                  <label for="startLocal">Start <span class="required-mark" aria-hidden="true">*</span></label>
+                  <input id="startLocal" name="startLocal" type="datetime-local" required disabled>
+                </div>
+                <div class="field">
+                  <label for="endLocal">End <span class="required-mark" aria-hidden="true">*</span></label>
+                  <input id="endLocal" name="endLocal" type="datetime-local" required disabled>
+                </div>
+                <div class="field field-wide">
+                  <label for="destination">Destination <span class="required-mark" aria-hidden="true">*</span></label>
+                  <input id="destination" name="destination" type="text" maxlength="160" placeholder="e.g. Cikarang Industrial Area" required disabled>
+                </div>
+                <div class="field field-wide">
+                  <label for="purpose">Purpose <span class="required-mark" aria-hidden="true">*</span></label>
+                  <input id="purpose" name="purpose" type="text" maxlength="160" placeholder="e.g. Customer site visit" required disabled>
+                </div>
+                <div class="field-wide form-actions">
+                  <button id="submitButton" type="submit" disabled>Submit request</button>
+                  <button id="cancelEditButton" class="secondary" type="button" hidden>Cancel changes</button>
+                </div>
+              </form>
+            </section>
+
+            <section class="panel bookings-panel" aria-labelledby="bookingsTitle">
+              <div class="section-heading">
+                <div>
+                  <p class="eyebrow">MY SCHEDULE</p>
+                  <h3 id="bookingsTitle">My bookings</h3>
+                </div>
+                <div class="schedule-controls">
+                  <div class="field schedule-filter-field">
+                    <label for="bookingRangeFilter">Time range</label>
+                    <select id="bookingRangeFilter" name="bookingRangeFilter">
+                      <option value="this_week" selected>This week</option>
+                      <option value="upcoming">Upcoming</option>
+                      <option value="this_month">This month</option>
+                      <option value="all">All time</option>
+                    </select>
+                  </div>
+                </div>
+              </div>
+              <p id="bookingListSummary" class="schedule-summary" aria-live="polite"></p>
+              <div id="bookingList" class="booking-list">
+                <p class="empty">Bookings will appear here after the data loads.</p>
+              </div>
+            </section>
+          </div>
+
+          <aside class="notice">
+            <strong>Workflow notice:</strong> New requests start as <strong>Pending</strong> until reviewed by an Administrator. Approved bookings cannot be edited; cancel the booking and submit a new request if schedule changes are needed.
+          </aside>
+        </section>
+
+        <section id="page-approval" class="page-view" aria-labelledby="approvalPageTitle" hidden>
+          <div class="page-heading">
+            <div>
+              <p class="eyebrow">DISPATCH &amp; REVIEW</p>
+              <h2 id="approvalPageTitle">Approval queue</h2>
+              <p class="page-description">Review pending booking requests, assign an available vehicle and driver, or reject with a reason.</p>
+            </div>
+          </div>
+
+          <div id="approvalRestrictedNotice" class="panel" hidden>
+            <p class="empty">Access restricted. Only users with Administrator security clearance can review or approve bookings.</p>
+          </div>
+
+          <section id="approvalWorkspace" class="panel" aria-labelledby="approvalQueueTitle" hidden>
+            <div class="approval-toolbar">
+              <div>
+                <p class="eyebrow">REVIEW QUEUE</p>
+                <h3 id="approvalQueueTitle">Booking requests</h3>
+              </div>
+              <div class="approval-filter-bar">
+                <div class="field">
+                  <label for="approvalStatusFilter">Status</label>
+                  <select id="approvalStatusFilter" name="approvalStatusFilter">
+                    <option value="pending" selected>Pending</option>
+                    <option value="approved">Approved</option>
+                    <option value="rejected">Rejected</option>
+                    <option value="cancelled">Cancelled</option>
+                    <option value="all">All statuses</option>
+                  </select>
+                </div>
+                <button id="refreshApprovalButton" class="secondary" type="button">Refresh queue</button>
+              </div>
+            </div>
+
+            <div id="approvalStatusBanner" class="status" role="status" aria-live="polite">Loading approval queue...</div>
+            <div id="approvalList" class="approval-list">
+              <p class="empty">Loading booking requests...</p>
+            </div>
+          </section>
+
+          <aside class="notice">
+            <strong>Conflict notice:</strong> Vehicle and driver availability is checked before saving an approval, but MyGeotab AddInData updates are not atomic. Concurrent approvals by multiple Administrators are verified after saving.
+          </aside>
+        </section>
+
+        <section id="page-users" class="page-view" aria-labelledby="usersPageTitle" hidden>
+          <div class="page-heading">
+            <div>
+              <p class="eyebrow">ACCESS &amp; DISPATCH</p>
+              <h2 id="usersPageTitle">Drivers &amp; Users</h2>
+              <p class="page-description">Monitor driver availability from approved schedules and review MyGeotab user clearances.</p>
+            </div>
+          </div>
+
+          <div id="usersRestrictedNotice" class="panel" hidden>
+            <p class="empty">Access restricted. Only users with Administrator security clearance can view the Drivers &amp; Users directory.</p>
+          </div>
+
+          <section id="usersWorkspace" class="panel" aria-labelledby="usersTableTitle" hidden>
+            <div class="users-toolbar">
+              <div>
+                <p class="eyebrow">DIRECTORY</p>
+                <h3 id="usersTableTitle">Drivers and account directory</h3>
+                <p class="page-description">Only records visible to the current MyGeotab session are shown. Some MyAdmin accounts may not be visible to BasicAuthentication users.</p>
+              </div>
+              <button id="refreshUsersButton" class="secondary" type="button">Refresh users</button>
+            </div>
+            <div id="userDataStatus" class="status user-data-status" role="status" aria-live="polite">Select this tab to load users from the current database.</div>
+
+            <div class="sub-tabs" role="tablist" aria-label="Drivers and users views">
+              <button id="subTabDrivers" class="sub-tab" type="button" role="tab" aria-selected="true" aria-controls="driversSubPanel">Drivers</button>
+              <button id="subTabAllUsers" class="sub-tab" type="button" role="tab" aria-selected="false" aria-controls="allUsersSubPanel">All users</button>
+            </div>
+
+            <div id="driversSubPanel" role="tabpanel" aria-labelledby="subTabDrivers">
+              <div class="kpi-grid-3">
+                <article class="panel report-card">
+                  <p class="eyebrow">ACTIVE DRIVERS</p>
+                  <p id="driversActiveCount" class="report-value">0</p>
+                  <p class="report-note">Eligible for approval assignment</p>
+                </article>
+                <article class="panel report-card">
+                  <p class="eyebrow">AVAILABLE NOW</p>
+                  <p id="driversAvailableCount" class="report-value">0</p>
+                  <p class="report-note">Not assigned to an ongoing trip</p>
+                </article>
+                <article class="panel report-card">
+                  <p class="eyebrow">ON TRIP NOW</p>
+                  <p id="driversOnTripCount" class="report-value">0</p>
+                  <p class="report-note">Assigned to an active schedule</p>
+                </article>
+              </div>
+
+              <div class="fleet-board-filters">
+                <div class="field">
+                  <label for="driverSearch">Search drivers</label>
+                  <input id="driverSearch" type="search" placeholder="Name or email">
+                </div>
+                <div class="field">
+                  <label for="driverAvailabilityFilter">Availability</label>
+                  <select id="driverAvailabilityFilter">
+                    <option value="all">All statuses</option>
+                    <option value="available">Available now</option>
+                    <option value="in_use">On trip now</option>
+                    <option value="inactive">Inactive</option>
+                  </select>
+                </div>
+              </div>
+
+              <div class="table-wrap">
+                <table class="data-table fleet-board-table">
+                  <thead>
+                    <tr>
+                      <th scope="col">Driver</th>
+                      <th scope="col">Availability</th>
+                      <th scope="col">Current / Next trip</th>
+                      <th scope="col">Account status</th>
+                    </tr>
+                  </thead>
+                  <tbody id="driverBoardBody">
+                    <tr>
+                      <td colspan="4"><p class="empty table-empty">Driver data has not been loaded.</p></td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+              <p class="table-note">Driver availability reflects approved booking schedules for the current time. Only Active Driver accounts can be assigned during approval.</p>
+            </div>
+
+            <div id="allUsersSubPanel" role="tabpanel" aria-labelledby="subTabAllUsers" hidden>
+              <div class="users-filters">
+                <div class="field">
+                  <label for="userSearch">Search users</label>
+                  <input id="userSearch" type="search" placeholder="Name, email, clearance, or driver">
+                </div>
+                <div class="field">
+                  <label for="userDriverFilter">Driver status</label>
+                  <select id="userDriverFilter">
+                    <option value="all">All users</option>
+                    <option value="driver">Drivers only</option>
+                    <option value="non_driver">Not a driver</option>
+                  </select>
+                </div>
+                <div class="field">
+                  <label for="userStatusFilter">Account status</label>
+                  <select id="userStatusFilter">
+                    <option value="all">All statuses</option>
+                    <option value="active">Active</option>
+                    <option value="scheduled">Scheduled</option>
+                    <option value="inactive">Inactive</option>
+                    <option value="unknown">Unknown</option>
+                  </select>
+                </div>
+              </div>
+              <div class="table-wrap">
+                <table class="data-table users-table">
+                  <thead>
+                    <tr>
+                      <th scope="col">Name</th>
+                      <th scope="col">Email / login</th>
+                      <th scope="col">Clearance</th>
+                      <th scope="col">Driver status</th>
+                      <th scope="col">Account status</th>
+                    </tr>
+                  </thead>
+                  <tbody id="userListBody">
+                    <tr>
+                      <td colspan="5"><p class="empty table-empty">User data has not been loaded.</p></td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+              <p class="table-note">Administrator security clearance authorizes access to Approval and Drivers &amp; Users. Account status is derived from each user's active-from and active-to dates.</p>
+            </div>
+          </section>
+        </section>
+
+        <section id="page-reports" class="page-view" aria-labelledby="reportsPageTitle" hidden>
+          <div class="page-heading">
+            <div>
+              <p class="eyebrow">ANALYTICS</p>
+              <h2 id="reportsPageTitle">Reports</h2>
+              <p class="page-description">Insights into booking requests, approvals, driver assignments, and fleet usage.</p>
+            </div>
+          </div>
+
+          <section class="panel report-filter-panel" aria-labelledby="reportFiltersTitle">
+            <div class="section-heading">
+              <div>
+                <p class="eyebrow">FILTERS</p>
+                <h3 id="reportFiltersTitle">Find booking history</h3>
+                <p class="page-description">Dates use your browser's local time and include bookings that overlap any part of the selected range.</p>
+              </div>
+            </div>
+            <form id="reportFilterForm" class="report-filter-form">
+              <div class="field">
+                <label for="reportStartDate">From</label>
+                <input id="reportStartDate" name="fromDate" type="date">
+              </div>
+              <div class="field">
+                <label for="reportEndDate">To</label>
+                <input id="reportEndDate" name="toDate" type="date">
+              </div>
+              <div class="field">
+                <label for="reportVehicle">Vehicle</label>
+                <select id="reportVehicle" name="vehicleId">
+                  <option value="">All vehicles</option>
+                </select>
+              </div>
+              <div class="field">
+                <label for="reportStatus">Status</label>
+                <select id="reportStatus" name="status">
+                  <option value="all">All statuses</option>
+                  <option value="pending">Pending</option>
+                  <option value="approved">Approved</option>
+                  <option value="rejected">Rejected</option>
+                  <option value="cancelled">Cancelled</option>
+                  <option value="unknown">Unknown</option>
+                </select>
+              </div>
+              <div class="field">
+                <label for="reportRequester">Booked by</label>
+                <select id="reportRequester" name="requester">
+                  <option value="">All requesters</option>
+                </select>
+              </div>
+              <div class="report-filter-actions">
+                <button type="submit">Apply filters</button>
+                <button id="resetReportFilters" class="secondary" type="button">Reset</button>
+              </div>
+              <p id="reportFilterMessage" class="filter-message" role="alert" hidden></p>
+            </form>
+          </section>
+
+          <div class="fm-report-kpi-grid">
+            <article class="panel report-card">
+              <p class="eyebrow">TOTAL BOOKINGS</p>
+              <p id="reportTotalBookings" class="report-value">0</p>
+              <p class="report-note">Matching the selected filters</p>
+            </article>
+            <article class="panel report-card">
+              <p class="eyebrow">PENDING APPROVAL</p>
+              <p id="reportPendingBookings" class="report-value">0</p>
+              <p class="report-note">Awaiting administrator review</p>
+            </article>
+            <article class="panel report-card">
+              <p class="eyebrow">APPROVED</p>
+              <p id="reportApprovedBookings" class="report-value">0</p>
+              <p class="report-note">Approved vehicle bookings</p>
+            </article>
+            <article class="panel report-card">
+              <p class="eyebrow">REJECTED / CANCELLED</p>
+              <p id="reportClosedBookings" class="report-value">0</p>
+              <p id="reportClosedBreakdown" class="report-note">0 rejected, 0 cancelled</p>
+            </article>
+          </div>
+
+          <section class="panel report-history-panel" aria-labelledby="reportHistoryTitle">
+            <div class="section-heading report-history-heading">
+              <div>
+                <p class="eyebrow">HISTORY</p>
+                <h3 id="reportHistoryTitle">Booking history</h3>
+              </div>
+              <p id="reportResultSummary" class="report-result-summary" role="status" aria-live="polite"></p>
+            </div>
+            <div class="table-wrap">
+              <table class="data-table report-table">
+                <thead>
+                  <tr>
+                    <th scope="col">Vehicle</th>
+                    <th scope="col">Driver</th>
+                    <th scope="col">Booked by</th>
+                    <th scope="col">Destination</th>
+                    <th scope="col">Purpose</th>
+                    <th scope="col">Start</th>
+                    <th scope="col">End</th>
+                    <th scope="col">Status</th>
+                    <th scope="col">Notes</th>
+                  </tr>
+                </thead>
+                <tbody id="reportHistoryBody">
+                  <tr>
+                    <td colspan="9"><p class="empty table-empty">Booking history will appear after the data loads.</p></td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+            <div class="table-pagination">
+              <p id="reportPageSummary" class="table-note" aria-live="polite"></p>
+              <div class="pagination-actions">
+                <button id="reportPreviousPage" class="secondary" type="button" disabled>Previous</button>
+                <button id="reportNextPage" class="secondary" type="button" disabled>Next</button>
+              </div>
+            </div>
+          </section>
+        </section>
+
+        <section id="page-vehicles" class="page-view" aria-labelledby="vehiclesPageTitle" hidden>
+          <div class="page-heading">
+            <div>
+              <p class="eyebrow">FLEET</p>
+              <h2 id="vehiclesPageTitle">Vehicles</h2>
+              <p class="page-description">Real-time booking availability and operational schedule for vehicles visible to this account.</p>
+            </div>
+          </div>
+
+          <div class="kpi-grid-3">
+            <article class="panel report-card">
+              <p class="eyebrow">ACTIVE VEHICLES</p>
+              <p id="vehiclesActiveCount" class="report-value">0</p>
+              <p class="report-note">Eligible for approval assignment</p>
+            </article>
+            <article class="panel report-card">
+              <p class="eyebrow">AVAILABLE NOW</p>
+              <p id="vehiclesAvailableCount" class="report-value">0</p>
+              <p class="report-note">Not in an active booking slot</p>
+            </article>
+            <article class="panel report-card">
+              <p class="eyebrow">IN USE NOW</p>
+              <p id="vehiclesInUseCount" class="report-value">0</p>
+              <p class="report-note">Assigned to an ongoing schedule</p>
+            </article>
+          </div>
+
+          <section class="panel" aria-labelledby="vehicleSetupTitle">
+            <div class="section-heading">
+              <div>
+                <p class="eyebrow">AVAILABILITY BOARD</p>
+                <h3 id="vehicleSetupTitle">Fleet vehicles</h3>
+              </div>
+            </div>
+            <div class="fleet-board-filters">
+              <div class="field">
+                <label for="vehicleSearch">Search vehicles</label>
+                <input id="vehicleSearch" type="search" placeholder="Vehicle name or ID">
+              </div>
+              <div class="field">
+                <label for="vehicleAvailabilityFilter">Availability</label>
+                <select id="vehicleAvailabilityFilter">
+                  <option value="all">All statuses</option>
+                  <option value="available">Available now</option>
+                  <option value="in_use">In use now</option>
+                  <option value="inactive">Inactive</option>
+                </select>
+              </div>
+            </div>
+            <div class="table-wrap">
+              <table class="data-table fleet-board-table">
+                <thead>
+                  <tr>
+                    <th scope="col">Vehicle</th>
+                    <th scope="col">Availability</th>
+                    <th scope="col">Current / Next schedule</th>
+                    <th scope="col">Asset status</th>
+                  </tr>
+                </thead>
+                <tbody id="vehicleBoardBody">
+                  <tr>
+                    <td colspan="4"><p class="empty table-empty">Loading vehicles...</p></td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+            <p class="table-note">Availability reflects approved booking schedules for the current time, not live GPS ignition status.</p>
+          </section>
+        </section>
+      </div>
+    </div>
+  </main>
+
+  <script src="js/domain/user-domain.js?v=20261125-2"></script>
+  <script src="js/domain/booking-domain.js?v=20261125-2"></script>
+  <script src="js/services/geotab-api.js?v=20261125-2"></script>
+  <script src="js/ui/formatters.js?v=20261125-2"></script>
+  <script src="js/ui/vehicles-view.js?v=20261125-2"></script>
+  <script src="js/ui/users-view.js?v=20261125-2"></script>
+  <script src="js/ui/reports-view.js?v=20261125-2"></script>
+  <script src="js/ui/booking-view.js?v=20261125-2"></script>
+  <script src="js/ui/approval-review-form.js?v=20261125-2"></script>
+  <script src="js/ui/approval-view.js?v=20261125-2"></script>
+  <script src="js/app.js?v=20261125-2"></script>
+</body>
+</html>
